@@ -17,3 +17,18 @@ def summarize(text: str, api_key: str) -> ChatCompletion:
     response.raise_for_status()
 
     return ChatCompletion.model_validate(response.json())
+
+async def summarize_async(client: httpx.AsyncClient, text: str, api_key: str) -> ChatCompletion:
+    response = await client.post(
+        url="https://openrouter.ai/api/v1/chat/completions",
+        headers={"Authorization": f"Bearer {api_key}"},
+        json={
+            "model":MODEL,
+            "messages": [{"role": "user", "content": f"Summarize in 2 sentences:\n\n{text}"}],
+            "max_tokens": 150
+        },
+        timeout=30
+    )
+    response.raise_for_status()
+    
+    return ChatCompletion.model_validate(response.json())

@@ -1,0 +1,17 @@
+[
+    {
+      "id": 1,
+      "title": "Remote work",
+      "text": "Many companies now allow employees to work from home several days a week. Supporters say it saves commuting time and improves focus. Critics say it weakens team culture and makes onboarding new people harder."
+    },
+    {
+      "id": 2,
+      "title": "Electric cars",
+      "text": "Electric car sales have grown quickly in recent years. Lower running costs and falling battery prices are the main reasons. Charging infrastructure is still uneven, especially outside big cities."
+    },
+    {
+      "id": 3,
+      "title": "Sleep and learning",
+      "text": "Studies show that sleep helps the brain store new information. People who study and then sleep usually remember more than people who stay awake. Regular sleep schedules matter more than a single long night."
+    }
+  ]

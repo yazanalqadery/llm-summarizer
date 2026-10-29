@@ -1,0 +1,6 @@
+{
+    "choices": [
+      {"message": {"role": "assistant", "content": "Here is the summary..."}}
+    ],
+    "usage": {"total_tokens": 87}
+  }

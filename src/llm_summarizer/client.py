@@ -1,3 +1,4 @@
+import asyncio
 from llm_summarizer.models import ChatCompletion
 import httpx
 
@@ -32,3 +33,7 @@ async def summarize_async(client: httpx.AsyncClient, text: str, api_key: str) ->
     response.raise_for_status()
     
     return ChatCompletion.model_validate(response.json())
+
+async def summarize_limited(sem: asyncio.Semaphore, client: httpx.AsyncClient, text: str, api_key: str) -> ChatCompletion:
+    async with sem:
+        return await summarize_async(client, text, api_key)

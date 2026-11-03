@@ -1,7 +1,9 @@
 import asyncio
 from collections.abc import Awaitable, Callable
-from llm_summarizer.models import ChatCompletion
+
 import httpx
+
+from llm_summarizer.models import ChatCompletion
 
 MODEL = "openai/gpt-4o-mini"
 RETRYABLE = {429, 500, 502, 503, 504}
@@ -55,7 +57,7 @@ async def with_retry(
             if attempt == max_tries:
                 raise
             await asyncio.sleep(2 ** attempt)
-    raise Exception(f"Failed to make call after {max_tries} tries")
+    raise RuntimeError(f"Failed to make call after {max_tries} tries")
 
 async def summarize_with_retry(
     sem: asyncio.Semaphore,

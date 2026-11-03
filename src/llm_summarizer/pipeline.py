@@ -2,11 +2,14 @@ import asyncio
 import json
 import os
 import ssl
+
 import httpx
 import truststore
+
 from llm_summarizer.client import summarize_with_retry
 from llm_summarizer.loader import load_docs
 from llm_summarizer.models import ChatCompletion, Document, Summary
+
 
 def split_results(
     docs: list[Document],

@@ -45,3 +45,9 @@ def test_gives_up_after_max_tries():
     with pytest.raises(httpx.ReadTimeout):
         asyncio.run(with_retry(call, max_tries=2))
     assert calls["n"] == 2
+
+def test_zero_tries_raises_runtime_error():
+    call, calls = make_flaky(0, ValueError("x"))
+    with pytest.raises(RuntimeError):
+        asyncio.run(with_retry(call, max_tries=0))
+    assert calls["n"] == 0

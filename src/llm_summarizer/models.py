@@ -18,3 +18,9 @@ class Usage(BaseModel):
 class ChatCompletion(BaseModel):
     choices :list[Choice]
     usage: Usage = Usage()
+
+class Summary(BaseModel):
+    id: int
+    title: str
+    summary: str
+    

@@ -37,7 +37,7 @@ def save_results(summaries: list[Summary], failures: list[dict], path: str) -> N
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-async def run(docs_path: str, out_path: str, max_concurrent: int = 2) -> None:
+async def run(docs_path: str, out_path: str, max_concurrent: int = 2) -> int:
     docs = load_docs(docs_path)
     key = os.getenv("OPENROUTER_API_KEY")
     sem = asyncio.Semaphore(max_concurrent)
@@ -49,3 +49,4 @@ async def run(docs_path: str, out_path: str, max_concurrent: int = 2) -> None:
     summaries, failures = split_results(docs, results)
     save_results(summaries, failures, out_path)
     print(f"{len(summaries)} summarized, {len(failures)} failed -> {out_path}")
+    return len(failures)

@@ -15,7 +15,9 @@ def main() -> None:
 
     load_dotenv()
     try:
-        asyncio.run(run(args.docs_path, args.out_path, args.max_concurrent))
+        failed = asyncio.run(run(args.docs_path, args.out_path, args.max_concurrent))
     except FileNotFoundError as e:
         print(f"Error: file not found: {e.filename}")
-        raise SystemExit(1)                      
+        raise SystemExit(1)
+    if failed:
+        raise SystemExit(1)            

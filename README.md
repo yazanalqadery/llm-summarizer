@@ -75,6 +75,14 @@ A list of documents, each with an `id`, a `title` and a `text`:
 
 Sending 3 documents took roughly 5 s one after another, about 2 s fully concurrent, and about 3 s with a limit of 2 (measured on a home connection, so your numbers will vary).
 
+Benchmark on 10 documents with `gpt-4o-mini` (measured on a home connection, so your numbers will vary):
+
+| `--max-concurrent` | Time |
+|---|---|
+| 1 | 15.7 s |
+| 5 | 3.2 s |
+| 10 | 2.1 s |
+
 ## Project layout
 
 ```

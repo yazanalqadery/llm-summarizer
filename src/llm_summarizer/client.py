@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Awaitable, Callable
 from llm_summarizer.models import ChatCompletion
 import httpx
 
@@ -45,3 +46,19 @@ def is_retryable(exc: Exception) -> bool:
     if isinstance(exc, httpx.HTTPStatusError):
         return exc.response.status_code in RETRYABLE
     return False
+
+async def with_retry(
+    make_call: Callable[[], Awaitable[ChatCompletion]],
+    max_tries: int = 3,
+) -> ChatCompletion:
+    for attempt in range(1, max_tries + 1):
+        try:
+            return await make_call()
+        except Exception as e:
+            if not is_retryable(e):
+                raise
+            if attempt == max_tries:
+                raise
+            await asyncio.sleep(2 ** attempt)
+    raise Exception(f"Failed to make call after {max_tries} tries")
+    

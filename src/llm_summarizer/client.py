@@ -61,4 +61,11 @@ async def with_retry(
                 raise
             await asyncio.sleep(2 ** attempt)
     raise Exception(f"Failed to make call after {max_tries} tries")
-    
+
+async def summarize_with_retry(
+    sem: asyncio.Semaphore,
+    client: httpx.AsyncClient,
+    text: str,
+    api_key: str,
+) -> ChatCompletion:
+    return await with_retry(lambda: summarize_limited(sem, client, text, api_key), max_tries=3)

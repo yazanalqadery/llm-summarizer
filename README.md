@@ -8,6 +8,7 @@ A command-line tool that reads documents from a JSON file and summarizes each on
 - **Retries with exponential backoff** for timeouts, `429` and `5xx` responses (never for `4xx` mistakes like a bad key)
 - **Failure isolation:** failed documents are recorded in the output file while the others are saved normally
 - **Validated data:** input documents and API responses are checked with Pydantic models
+- **Meaningful exit codes**, so cron jobs and CI can tell when something went wrong
 - **Tested:** pytest suite for the retry rules, the retry loop and the result splitting, with no network calls
 
 ## Requirements
@@ -41,7 +42,7 @@ uv run llm-summarizer docs.json out.json --max-concurrent 5
 | `out_path` | where to write the results | `summaries.json` |
 | `--max-concurrent` | maximum requests in flight at once | `2` |
 
-If the input file doesn't exist, the tool prints one error line and exits with code `1`.
+**Exit codes:** `0` if every document was summarized. `1` if the input file is missing (the tool prints one error line) or if any document failed. In the second case the output file still contains the successful summaries and a `failures` list.
 
 ### Input format
 
@@ -71,11 +72,11 @@ A list of documents, each with an `id`, a `title` and a `text`:
 
 1. `loader.py` reads the input file and validates each item as a `Document`.
 2. `client.py` sends one request per document. A semaphore limits how many run at once, and `with_retry` retries only the failures that `is_retryable` marks as temporary, waiting 2 s, then 4 s, between tries.
-3. `pipeline.py` collects the results with `asyncio.gather(..., return_exceptions=True)`, splits them into summaries and failures, and saves the output file.
+3. `pipeline.py` collects the results with `asyncio.gather(..., return_exceptions=True)`, splits them into summaries and failures, saves the output file and returns the number of failures.
 
-Sending 3 documents took roughly 5 s one after another, about 2 s fully concurrent, and about 3 s with a limit of 2 (measured on a home connection, so your numbers will vary).
+## Benchmark
 
-Benchmark on 10 documents with `gpt-4o-mini` (measured on a home connection, so your numbers will vary):
+10 documents summarized with `gpt-4o-mini` (measured on a home connection, so your numbers will vary):
 
 | `--max-concurrent` | Time |
 |---|---|
@@ -83,16 +84,27 @@ Benchmark on 10 documents with `gpt-4o-mini` (measured on a home connection, so 
 | 5 | 3.2 s |
 | 10 | 2.1 s |
 
+To reproduce it:
+
+```powershell
+uv run python make_bench_docs.py
+uv run python compare_timing.py
+```
+
+`make_bench_docs.py` builds `bench_docs.json` by cycling through the documents in `docs.json`, and `compare_timing.py` runs the pipeline once per limit and prints the timings. Both send real requests.
+
 ## Project layout
 
 ```
 src/llm_summarizer/
-    __init__.py    command-line entry point
-    models.py      Pydantic models (Document, Summary, ChatCompletion, ...)
-    loader.py      load_docs
-    client.py      API calls, semaphore, retry logic
-    pipeline.py    run, split_results, save_results
-tests/             pytest tests
+    __init__.py       command-line entry point
+    models.py         Pydantic models (Document, Summary, ChatCompletion, ...)
+    loader.py         load_docs
+    client.py         API calls, semaphore, retry logic
+    pipeline.py       run, split_results, save_results
+tests/                pytest tests (no network calls)
+compare_timing.py     benchmark across concurrency limits
+make_bench_docs.py    builds the benchmark input
 ```
 
 ## Tests

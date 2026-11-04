@@ -41,6 +41,11 @@ def summarize(text: str, api_key: str) -> ChatCompletion:
     response.raise_for_status()
     return ChatCompletion.model_validate(response.json())
 
+def analyze(text: str, api_key: str) -> Analysis:
+    response = httpx.post(**build_analysis_request(text, api_key))
+    response.raise_for_status()
+    completion = ChatCompletion.model_validate(response.json())
+    return Analysis.model_validate_json(completion.choices[0].message.content)
 
 async def summarize_async(client: httpx.AsyncClient, text: str, api_key: str) -> ChatCompletion:
     response = await client.post(**build_request(text, api_key))

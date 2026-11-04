@@ -31,3 +31,19 @@ def test_analysis_rejects_missing_field():
 def test_analysis_rejects_extra_field():
     with pytest.raises(ValidationError):
         Analysis.model_validate_json(EXTRA)
+
+def test_analysis_rejects_unknown_sentiment():
+    bad = GOOD.replace('"neutral"', '"mixed"')
+    with pytest.raises(ValidationError):
+        Analysis.model_validate_json(bad)
+
+
+def test_analysis_rejects_wrong_case_sentiment():
+    bad = GOOD.replace('"neutral"', '"Neutral"')
+    with pytest.raises(ValidationError):
+        Analysis.model_validate_json(bad)
+
+def test_analysis_accepts_all_three_sentiments():
+    for sentiment in ["positive", "neutral", "negative"]:
+        text = GOOD.replace('"neutral"', f'"{sentiment}"')
+        assert Analysis.model_validate_json(text).sentiment == sentiment

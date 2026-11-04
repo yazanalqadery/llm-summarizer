@@ -1,5 +1,8 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
+Sentiment = Literal["positive", "neutral", "negative"]
 
 class Document(BaseModel):
     id: int
@@ -36,4 +39,4 @@ class Analysis(BaseModel):
     model_config = ConfigDict(extra="forbid")
     summary: str
     keywords: list[str]
-    sentiment: str
+    sentiment: Sentiment

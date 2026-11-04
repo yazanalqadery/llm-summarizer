@@ -3,7 +3,7 @@ from collections.abc import Awaitable, Callable
 
 import httpx
 
-from llm_summarizer.models import ChatCompletion
+from llm_summarizer.models import Analysis, ChatCompletion
 
 MODEL = "openai/gpt-4o-mini"
 RETRYABLE = {429, 500, 502, 503, 504}
@@ -21,6 +21,20 @@ def build_request(text: str, api_key: str) -> dict:
         },
         "timeout": 30,
     }
+
+def build_analysis_request(text: str, api_key: str) -> dict:
+    req = build_request(text, api_key)
+    req["json"]["messages"][0]["content"] = (
+        f"Analyze this text. Give a 2-sentence summary, up to 5 keywords and "
+        f"the overall sentiment (positive, neutral or negative).\n\n{text}"
+    )
+    req["json"]["max_tokens"] = 300                                   
+    req["json"]["response_format"] = {
+        "type": "json_schema",
+        "json_schema": {"name": "analysis", "strict": True, "schema": Analysis.model_json_schema()},
+    }
+    req["json"]["provider"] = {"require_parameters": True}             
+    return req
 
 def summarize(text: str, api_key: str) -> ChatCompletion:
     response = httpx.post(**build_request(text, api_key))

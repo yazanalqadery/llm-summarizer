@@ -68,21 +68,14 @@ def save_results(summaries: list[BaseModel], failures: list[dict], path: str) ->
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-async def run(docs_path: str, out_path: str, max_concurrent: int = 2) -> int:
-    docs = load_docs(docs_path)
-    key = os.getenv("OPENROUTER_API_KEY")
-    sem = asyncio.Semaphore(max_concurrent)
-    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-
-    async with httpx.AsyncClient(verify=ctx) as client: 
-        results = await asyncio.gather(*[summarize_with_retry(sem, client, doc.text, key) for doc in docs], return_exceptions=True)
-    
-    summaries, failures = split_results(docs, results)
-    save_results(summaries, failures, out_path)
-    print(f"{len(summaries)} summarized, {len(failures)} failed -> {out_path}")
-    return len(failures)
-
-async def run_analysis(docs_path: str, out_path: str, max_concurrent: int = 2) -> int:
+async def _run_batch(
+    docs_path: str,
+    out_path: str,
+    max_concurrent: int,
+    worker,
+    splitter,
+    label: str,
+) -> int:
     docs = load_docs(docs_path)
     key = os.environ["OPENROUTER_API_KEY"]
     sem = asyncio.Semaphore(max_concurrent)
@@ -90,11 +83,23 @@ async def run_analysis(docs_path: str, out_path: str, max_concurrent: int = 2) -
 
     async with httpx.AsyncClient(verify=ctx) as client:
         results = await asyncio.gather(
-            *[analyze_with_retry(sem, client, d.text, key) for d in docs],     
+            *[worker(sem, client, d.text, key) for d in docs],
             return_exceptions=True,
         )
 
-    analyzed, failures = split_analyses(docs, results)                   
-    save_results(analyzed, failures, out_path)
-    print(f"{len(analyzed)} analyzed, {len(failures)} failed -> {out_path}")
-    return len(failures)                                                   
+    done, failures = splitter(docs, results)
+    save_results(done, failures, out_path)
+    print(f"{len(done)} {label}, {len(failures)} failed -> {out_path}")
+    return len(failures)
+
+async def run(docs_path: str, out_path: str, max_concurrent: int = 2) -> int:
+    return await _run_batch(
+        docs_path, out_path, max_concurrent, summarize_with_retry, split_results, "summarized"
+    )
+
+
+async def run_analysis(docs_path: str, out_path: str, max_concurrent: int = 2) -> int:
+    return await _run_batch(
+        docs_path, out_path, max_concurrent, analyze_with_retry, split_analyses, "analyzed"
+    )
+                                                  

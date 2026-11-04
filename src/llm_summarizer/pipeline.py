@@ -7,7 +7,7 @@ import httpx
 import truststore
 from pydantic import BaseModel
 
-from llm_summarizer.client import summarize_with_retry
+from llm_summarizer.client import analyze_with_retry, summarize_with_retry
 from llm_summarizer.loader import load_docs
 from llm_summarizer.models import (
     Analysis,
@@ -81,3 +81,20 @@ async def run(docs_path: str, out_path: str, max_concurrent: int = 2) -> int:
     save_results(summaries, failures, out_path)
     print(f"{len(summaries)} summarized, {len(failures)} failed -> {out_path}")
     return len(failures)
+
+async def run_analysis(docs_path: str, out_path: str, max_concurrent: int = 2) -> int:
+    docs = load_docs(docs_path)
+    key = os.environ["OPENROUTER_API_KEY"]
+    sem = asyncio.Semaphore(max_concurrent)
+    ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+
+    async with httpx.AsyncClient(verify=ctx) as client:
+        results = await asyncio.gather(
+            *[analyze_with_retry(sem, client, d.text, key) for d in docs],     
+            return_exceptions=True,
+        )
+
+    analyzed, failures = split_analyses(docs, results)                   
+    save_results(analyzed, failures, out_path)
+    print(f"{len(analyzed)} analyzed, {len(failures)} failed -> {out_path}")
+    return len(failures)                                                   

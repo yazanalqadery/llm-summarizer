@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Document(BaseModel):
@@ -17,7 +17,7 @@ class Usage(BaseModel):
     total_tokens: int = 0
 
 class ChatCompletion(BaseModel):
-    choices :list[Choice]
+    choices :list[Choice] = Field(min_length=1)
     usage: Usage = Usage()
 
 class Summary(BaseModel):

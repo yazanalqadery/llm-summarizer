@@ -8,9 +8,10 @@ A command-line tool that reads documents from a JSON file and processes each one
 - **Retries with exponential backoff** for timeouts, `429` and `5xx` responses (never for `4xx` mistakes like a bad key)
 - **Failure isolation:** failed documents are recorded in the output file while the others are saved normally
 - **Structured output:** the `analyze` mode sends a JSON schema generated from a Pydantic model, requires providers that support it, and validates the reply, so a malformed answer becomes one recorded failure
+- **Strict result fields:** sentiment must be `positive`, `neutral` or `negative`, and a result may have at most five keywords
 - **Validated data:** input documents and API responses are checked with Pydantic models
 - **Meaningful exit codes**, so cron jobs and CI can tell when something went wrong
-- **Tested:** pytest suite for the retry rules, the retry loop, the result splitting, the models and the request builders, with no network calls
+- **Tested:** pytest suite for the retry rules, the retry loop, the result splitting, the models (including the schema limits), the request builders and the file output, with no network calls
 
 ## Requirements
 
@@ -56,7 +57,7 @@ uv run llm-summarizer docs.json analysis.json --mode analyze
 ### Modes
 
 - **`summarize`** (default): a short text summary for each document.
-- **`analyze`**: structured output. The request carries a JSON schema generated from the `Analysis` model, and the reply is validated against it. Each result has a summary, a few keywords and a sentiment label.
+- **`analyze`**: structured output. The request carries a JSON schema generated from the `Analysis` model, and the reply is validated against it. Each result has a summary, up to five keywords and a sentiment of `positive`, `neutral` or `negative`. A reply that breaks any of these rules is rejected and recorded in `failures`.
 
 `analyze` sends the request with `require_parameters`, so it is only routed to providers that support structured outputs. If the chosen model has no such provider, the request fails with a `4xx`, which is recorded in `failures` and is not retried.
 
@@ -106,7 +107,7 @@ Analyze mode:
 ## How it works
 
 1. `loader.py` reads the input file and validates each item as a `Document`.
-2. `client.py` builds one request per document. A semaphore limits how many run at once, and `with_retry` retries only the failures that `is_retryable` marks as temporary, waiting 2 s, then 4 s, between tries. In `analyze` mode, the reply text is parsed with `Analysis.model_validate_json`, so bad JSON or missing fields raise a validation error.
+2. `client.py` builds one request per document. A semaphore limits how many run at once, and `with_retry` retries only the failures that `is_retryable` marks as temporary, waiting 2 s, then 4 s, between tries. In `analyze` mode, the reply text is parsed with `Analysis.model_validate_json`, so bad JSON, missing fields, an unknown sentiment or too many keywords raise a validation error.
 3. `pipeline.py` collects the results with `asyncio.gather(..., return_exceptions=True)`, splits them into successes and failures, saves the output file and returns the number of failures. `run` and `run_analysis` share one batch function and differ only in the worker and splitter they pass in.
 
 ## Benchmark

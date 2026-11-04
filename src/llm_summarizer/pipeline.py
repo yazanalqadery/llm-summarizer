@@ -5,6 +5,7 @@ import ssl
 
 import httpx
 import truststore
+from pydantic import BaseModel
 
 from llm_summarizer.client import summarize_with_retry
 from llm_summarizer.loader import load_docs
@@ -59,7 +60,7 @@ def split_analyses(
             )
     return analyzed, failures
 
-def save_results(summaries: list[Summary], failures: list[dict], path: str) -> None:
+def save_results(summaries: list[BaseModel], failures: list[dict], path: str) -> None:
     data = {
         "summaries": [s.model_dump() for s in summaries],
         "failures": failures,

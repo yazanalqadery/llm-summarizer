@@ -47,6 +47,29 @@ def analyze(text: str, api_key: str) -> Analysis:
     completion = ChatCompletion.model_validate(response.json())
     return Analysis.model_validate_json(completion.choices[0].message.content)
 
+async def analyze_async(client: httpx.AsyncClient, text: str, api_key: str) -> Analysis:
+    response = await client.post(**build_analysis_request(text, api_key))
+    response.raise_for_status()
+    completion = ChatCompletion.model_validate(response.json())
+    return Analysis.model_validate_json(completion.choices[0].message.content)
+
+async def analyze_limited(
+    sem: asyncio.Semaphore,
+    client: httpx.AsyncClient,
+    text: str,
+    api_key: str,
+) -> Analysis:
+    async with sem:
+        return await analyze_async(client, text, api_key)
+
+async def analyze_with_retry(
+    sem: asyncio.Semaphore,
+    client: httpx.AsyncClient,
+    text: str,
+    api_key: str,
+) -> Analysis:
+    return await with_retry(lambda: analyze_limited(sem, client, text, api_key), max_tries=3)
+
 async def summarize_async(client: httpx.AsyncClient, text: str, api_key: str) -> ChatCompletion:
     response = await client.post(**build_request(text, api_key))
     response.raise_for_status()
@@ -63,10 +86,10 @@ def is_retryable(exc: Exception) -> bool:
         return exc.response.status_code in RETRYABLE
     return False
 
-async def with_retry(
-    make_call: Callable[[], Awaitable[ChatCompletion]],
+async def with_retry[T](
+    make_call: Callable[[], Awaitable[T]],
     max_tries: int = 3,
-) -> ChatCompletion:
+) -> T:
     for attempt in range(1, max_tries + 1):
         try:
             return await make_call()

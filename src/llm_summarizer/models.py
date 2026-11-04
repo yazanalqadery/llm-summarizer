@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Document(BaseModel):
@@ -25,3 +25,8 @@ class Summary(BaseModel):
     title: str
     summary: str
     
+class Analysis(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    summary: str
+    keywords: list[str]
+    sentiment: str

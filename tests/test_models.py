@@ -47,3 +47,17 @@ def test_analysis_accepts_all_three_sentiments():
     for sentiment in ["positive", "neutral", "negative"]:
         text = GOOD.replace('"neutral"', f'"{sentiment}"')
         assert Analysis.model_validate_json(text).sentiment == sentiment
+
+def make_keywords_text(count: int) -> str:
+    words = ", ".join(f'"k{i}"' for i in range(count))
+    return GOOD.replace('["remote", "commute"]', f"[{words}]")
+
+
+def test_analysis_accepts_five_keywords():
+    a = Analysis.model_validate_json(make_keywords_text(5))
+    assert len(a.keywords) == 5
+
+
+def test_analysis_rejects_six_keywords():
+    with pytest.raises(ValidationError):
+        Analysis.model_validate_json(make_keywords_text(6))

@@ -38,5 +38,5 @@ class AnalyzedDoc(BaseModel):
 class Analysis(BaseModel):
     model_config = ConfigDict(extra="forbid")
     summary: str
-    keywords: list[str]
+    keywords: list[str] = Field(max_length=5)
     sentiment: Sentiment

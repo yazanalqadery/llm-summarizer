@@ -1,5 +1,5 @@
-from llm_summarizer.models import ChatCompletion, Document
-from llm_summarizer.pipeline import split_results
+from llm_summarizer.models import Analysis, ChatCompletion, Document
+from llm_summarizer.pipeline import split_analyses, split_results
 
 
 def make_docs() -> list[Document]:
@@ -39,4 +39,27 @@ def test_all_failures_has_no_summaries():
     results = [ValueError("bad doc"), ValueError("bad doc"), ValueError("bad doc")]
     summaries, failures = split_results(make_docs(), results)
     assert len(summaries) == 0
+    assert len(failures) == 3
+
+def make_analysis(sentiment: str = "neutral") -> Analysis:
+    return Analysis(summary="s", keywords=["a", "b"], sentiment=sentiment)
+
+
+def test_analyses_keep_keywords_and_sentiment():
+    analyzed, failures = split_analyses(make_docs()[:1], [make_analysis("positive")])
+    assert analyzed[0].keywords == ["a","b"]    
+    assert analyzed[0].sentiment == "positive"     
+    assert failures == []                 
+
+
+def test_analysis_failure_keeps_the_document_id():
+    results = [make_analysis(), ValueError("bad json"), make_analysis()]
+    analyzed, failures = split_analyses(make_docs(), results)
+    assert failures[0]["id"] == 2                 
+    assert [a.id for a in analyzed] == [1,3]           
+
+def test_all_analyses_failing_has_no_results():
+    results = [ValueError("bad json"), ValueError("bad json"), ValueError("bad json")]
+    analyzed, failures = split_analyses(make_docs(), results)
+    assert analyzed == []
     assert len(failures) == 3

@@ -8,7 +8,13 @@ import truststore
 
 from llm_summarizer.client import summarize_with_retry
 from llm_summarizer.loader import load_docs
-from llm_summarizer.models import ChatCompletion, Document, Summary
+from llm_summarizer.models import (
+    Analysis,
+    AnalyzedDoc,
+    ChatCompletion,
+    Document,
+    Summary,
+)
 
 
 def split_results(
@@ -31,6 +37,27 @@ def split_results(
                 summary=r.choices[0].message.content,
             ))
     return summaries, failures
+
+def split_analyses(
+    docs: list[Document],
+    results: list[Analysis | BaseException],
+) -> tuple[list[AnalyzedDoc], list[dict]]:
+    analyzed: list[AnalyzedDoc] = []
+    failures: list[dict] = []
+    for d, r in zip(docs, results):
+        if isinstance(r, BaseException):
+            failures.append({"id": d.id, "title": d.title, "error": str(r)})
+        else:
+            analyzed.append(
+                AnalyzedDoc(
+                    id=d.id,
+                    title=d.title,
+                    summary=r.summary,
+                    keywords=r.keywords,
+                    sentiment=r.sentiment,
+                )
+            )
+    return analyzed, failures
 
 def save_results(summaries: list[Summary], failures: list[dict], path: str) -> None:
     data = {
